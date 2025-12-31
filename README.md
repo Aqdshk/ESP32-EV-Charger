@@ -1,23 +1,23 @@
 # ESP32 EV Charger Controller (OCPP-ready)
 
-Projek ini jadikan `ESP32` sebagai **"otak" untuk EV charger**, dengan:
+This project uses `ESP32` as the **"brain" for an EV charger**, with:
 
-- **EVSE logic** (state machine, Control Pilot PWM, kawal contactor)
-- **OCPP 1.6J integration** dengan SteVe backend (remote start/stop, transaction management)
-- **I2C LCD Display** untuk status monitoring (16x2 LCD dengan PCF8574T adapter)
-- **Manual buttons** untuk start/stop charging (2-press safety feature)
+- **EVSE logic** (state machine, Control Pilot PWM, contactor control)
+- **OCPP 1.6J integration** with SteVe backend (remote start/stop, transaction management)
+- **I2C LCD Display** for status monitoring (16x2 LCD with PCF8574T adapter)
+- **Manual buttons** for start/stop charging (2-press safety feature)
 - **OTA (Over-The-Air) Updates** via ArduinoOTA (local network)
 - **OCPP Firmware Update** via SteVe backend (remote firmware management)
-- **Meter simulation** untuk testing (boleh diganti dengan Modbus/CT sensor sebenar)
+- **Meter simulation** for testing (can be replaced with real Modbus/CT sensor)
 
-> **PENTING (keselamatan)**  
-> Kod ini hanya rangka (prototype). Semua sambungan AC / contactor / RCD untuk EV charger **mesti** direka & diperiksa oleh jurutera berkelayakan dan mengikut standard (contoh IEC 61851, IEC 60364). Jangan guna projek ini terus untuk pemasangan grid sebenar tanpa reka bentuk dan ujian yang betul.
+> **IMPORTANT (Safety)**  
+> This code is only a framework (prototype). All AC / contactor / RCD connections for the EV charger **must** be designed & inspected by qualified engineers and comply with standards (e.g., IEC 61851, IEC 60364). Do not use this project directly for actual grid installation without proper design and testing.
 
 ---
 
-## Cara build (PlatformIO)
+## How to Build (PlatformIO)
 
-1. Pastikan ada **VS Code + PlatformIO** atau gunakan **CLI**:
+1. Ensure you have **VS Code + PlatformIO** or use **CLI**:
 
    ```bash
    cd ESP-Charger-RND
@@ -26,94 +26,94 @@ Projek ini jadikan `ESP32` sebagai **"otak" untuk EV charger**, dengan:
    pio device monitor
    ```
 
-2. Edit `platformio.ini` jika perlu (board lain, library lain, dsb).
+2. Edit `platformio.ini` if needed (different board, libraries, etc.).
 
 ---
 
-## Fail utama
+## Main Files
 
 - `src/HardwareConfig.h`  
-  Pin mapping untuk contactor, Control Pilot, RCD, emergency stop, buttons, LCD.
+  Pin mapping for contactor, Control Pilot, RCD, emergency stop, buttons, LCD.
 
 - `src/EvseController.*`  
-  EVSE state machine (Idle / WaitingForCar / WaitingForAuth / Charging / Fault), kawal contactor, hasilkan PWM CP, dan simulasi bacaan meter (boleh diganti dengan Modbus / CT sebenar).
+  EVSE state machine (Idle / WaitingForCar / WaitingForAuth / Charging / Fault), contactor control, CP PWM generation, and meter reading simulation (can be replaced with real Modbus / CT sensor).
 
 - `src/OcppClient.*`  
-  OCPP 1.6J client menggunakan MicroOcpp library:
+  OCPP 1.6J client using MicroOcpp library:
   - WiFi connection management
-  - OCPP WebSocket connection ke SteVe backend
+  - OCPP WebSocket connection to SteVe backend
   - Remote start/stop transaction handling
-  - Transaction management dan meter value reporting
+  - Transaction management and meter value reporting
 
 - `src/LcdDisplay.*`  
-  I2C LCD display untuk status monitoring (state, current, energy, transaction info).
+  I2C LCD display for status monitoring (state, current, energy, transaction info).
 
 - `src/OtaManager.*`  
-  ArduinoOTA untuk firmware update via local network.
+  ArduinoOTA for firmware updates via local network.
 
 - `src/OcppFirmwareUpdate.*`  
-  OCPP Firmware Management untuk remote firmware update dari SteVe backend.
+  OCPP Firmware Management for remote firmware updates from SteVe backend.
 
 - `src/main.cpp`  
-  Main loop: inisialisasi semua modul, handle button inputs, update LCD, manage OTA updates.
+  Main loop: initialize all modules, handle button inputs, update LCD, manage OTA updates.
 
 ---
 
-## Konfigurasi
+## Configuration
 
 ### SteVe OCPP Setup
 
-Di pelayan SteVe (contoh: `http://34.143.146.176:8180/steve/manager/signin`):
+On the SteVe server (e.g., `http://34.143.146.176:8180/steve/manager/signin`):
 
-1. Tambah **Charge Point** baru
-2. Set **ChargeBoxId / Charge Point ID** = `ESP32-CP-01` (atau apa-apa, tapi **mesti sama** dengan `CHARGE_POINT_ID` dalam `OcppClient.cpp`)
-3. Pilih **OCPP 1.6J** dan set bilangan connector (contoh 1)
+1. Add a new **Charge Point**
+2. Set **ChargeBoxId / Charge Point ID** = `ESP32-CP-01` (or any value, but **must match** the `CHARGE_POINT_ID` in `OcppClient.cpp`)
+3. Select **OCPP 1.6J** and set the number of connectors (e.g., 1)
 
 ### WiFi & OCPP Client Setup
 
 1. Edit `src/OcppClient.cpp`:
-   - Masukkan `WIFI_SSID` dan `WIFI_PASSWORD`
-   - Pastikan `OCPP_WS_URL` betul:
-     - Contoh: `ws://34.143.146.176:8180/steve/websocket/CentralSystemService`
-   - Pastikan `CHARGE_POINT_ID` sama dengan yang di SteVe (default: `ESP32-CP-01`)
+   - Enter `WIFI_SSID` and `WIFI_PASSWORD`
+   - Ensure `OCPP_WS_URL` is correct:
+     - Example: `ws://34.143.146.176:8180/steve/websocket/CentralSystemService`
+   - Ensure `CHARGE_POINT_ID` matches the one in SteVe (default: `ESP32-CP-01`)
 
-2. Edit `src/HardwareConfig.h` jika perlu:
-   - Pin mapping untuk hardware kamu
+2. Edit `src/HardwareConfig.h` if needed:
+   - Pin mapping for your hardware
    - LCD I2C address (default: 0x27)
-   - Simulated meter values untuk testing
+   - Simulated meter values for testing
 
-3. Flash ESP32 dan buka Serial Monitor (`115200 baud`):
-   - Kau patut nampak log WiFi connect
-   - Bila OCPP sudah connected, `BootNotification` akan muncul di UI SteVe dan charge point akan nampak **online**
+3. Flash ESP32 and open Serial Monitor (`115200 baud`):
+   - You should see WiFi connection logs
+   - Once OCPP is connected, `BootNotification` will appear in SteVe UI and the charge point will show as **online**
 
 ### OTA (Over-The-Air) Update
 
-Untuk update firmware tanpa USB cable:
+To update firmware without USB cable:
 
 1. First upload via USB: `pio run -t upload`
-2. Get IP address dari Serial Monitor (contoh: `192.168.1.100`)
+2. Get IP address from Serial Monitor (e.g., `192.168.1.100`)
 3. Subsequent uploads via OTA:
    ```bash
    pio run -t upload -e esp32dev --upload-port 192.168.1.100
    ```
 
-**Dokumentasi lengkap:** Lihat `OTA_UPDATE.md`
+**Full documentation:** See `OTA_UPDATE.md`
 
 ### OCPP Firmware Update
 
-Untuk update firmware remotely dari SteVe backend:
+To update firmware remotely from SteVe backend:
 
-1. Host firmware `.bin` file di HTTP server (GitHub Releases atau web server)
-2. Trigger `UpdateFirmware` command dari SteVe dengan firmware URL
-3. ESP32 akan download dan install firmware automatically
+1. Host firmware `.bin` file on HTTP server (GitHub Releases or web server)
+2. Trigger `UpdateFirmware` command from SteVe with firmware URL
+3. ESP32 will download and install firmware automatically
 
-**Dokumentasi lengkap:** Lihat `OCPP_FIRMWARE_UPDATE.md`
+**Full documentation:** See `OCPP_FIRMWARE_UPDATE.md`
 
 ---
 
 ## Hardware Setup
 
-Lihat `WIRING_DIAGRAM.md` untuk wiring diagram lengkap.
+See `WIRING_DIAGRAM.md` for complete wiring diagram.
 
 ### Pin Mapping (Default)
 
@@ -135,32 +135,32 @@ Lihat `WIRING_DIAGRAM.md` untuk wiring diagram lengkap.
 - **LCD Display (I2C)**:
   - `PIN_I2C_SDA` (GPIO 21) → I2C Data
   - `PIN_I2C_SCL` (GPIO 22) → I2C Clock
-  - Address: `0x27` (default, boleh tukar ikut hardware)
+  - Address: `0x27` (default, can be changed according to hardware)
 
-> **PENTING (keselamatan):** Rekaan fizikal & keselamatan perlukan kerja hardware yang serius. Kod di sini fokus kepada logik ESP32 dan integrasi OCPP. Pastikan semua sambungan AC / contactor / RCD direka & diperiksa oleh jurutera berkelayakan mengikut standard (IEC 61851, IEC 60364).
+> **IMPORTANT (Safety):** Physical design & safety require serious hardware work. The code here focuses on ESP32 logic and OCPP integration. Ensure all AC / contactor / RCD connections are designed & inspected by qualified engineers according to standards (IEC 61851, IEC 60364).
 
 ---
 
 ## Features
 
 - ✅ **EVSE State Machine** - IEC 61851 compliant state management (Idle, WaitingForCar, WaitingForAuth, Charging, Fault)
-- ✅ **OCPP 1.6J Integration** - Full OCPP client dengan SteVe backend support
-- ✅ **Remote Start/Stop** - Control charging dari SteVe backend
-- ✅ **Manual Buttons** - Local start/stop dengan 2-press safety feature
+- ✅ **OCPP 1.6J Integration** - Full OCPP client with SteVe backend support
+- ✅ **Remote Start/Stop** - Control charging from SteVe backend
+- ✅ **Manual Buttons** - Local start/stop with 2-press safety feature
 - ✅ **LCD Display** - Real-time status monitoring (state, current, energy, transaction info)
 - ✅ **OTA Updates** - Over-the-air firmware updates via ArduinoOTA (local network)
-- ✅ **OCPP Firmware Management** - Remote firmware updates dari SteVe backend
-- ✅ **Meter Simulation** - Testing meter readings (boleh replace dengan real Modbus/CT sensor)
+- ✅ **OCPP Firmware Management** - Remote firmware updates from SteVe backend
+- ✅ **Meter Simulation** - Testing meter readings (can be replaced with real Modbus/CT sensor)
 
 ---
 
-## Dokumentasi
+## Documentation
 
 - `WIRING_DIAGRAM.md` - Detailed hardware wiring instructions
-- `OTA_UPDATE.md` - ArduinoOTA setup dan usage guide
+- `OTA_UPDATE.md` - ArduinoOTA setup and usage guide
 - `OCPP_FIRMWARE_UPDATE.md` - OCPP firmware update setup guide
 - `HYBRID_ARCHITECTURE.md` - Future hybrid (RPi + ESP32) architecture design
-- `HYBRID_IMPLEMENTATION_ROADMAP.md` - Implementation roadmap untuk hybrid architecture
+- `HYBRID_IMPLEMENTATION_ROADMAP.md` - Implementation roadmap for hybrid architecture
 - `RASPBERRY_PI_CHARGER_COMPARISON.md` - ESP32 vs Raspberry Pi comparison
 
 ---
@@ -168,5 +168,3 @@ Lihat `WIRING_DIAGRAM.md` untuk wiring diagram lengkap.
 ## License
 
 See license file for details.
-
-
